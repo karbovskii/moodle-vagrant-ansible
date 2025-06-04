@@ -25,51 +25,51 @@ The diagram below illustrates the key components and data flow in the Moodle inf
 
 ```mermaid
 graph LR
-    %% Define nodes
-    U[👥 Users]
-    LB[⚖️ Load Balancer<br/>HAProxy]
+    %% Define nodes with GitHub dark/light mode optimized styling
+    U["👥<br/><b>Users</b>"]
+    LB["⚖️<br/><b>Load Balancer</b><br/>HAProxy"]
     
     %% Web servers positioned to minimize arrow crossing
-    subgraph WS_GROUP[🌐 Web Server Cluster]
+    subgraph WS_GROUP["🌐 <b>Web Server Cluster</b>"]
         direction TB
-        WS1[Web Server 1<br/>Moodle + PHP]
-        WS2[Web Server 2<br/>Moodle + PHP]
+        WS1["<b>Web Server 1</b><br/>Moodle + PHP"]
+        WS2["<b>Web Server 2</b><br/>Moodle + PHP"]
     end
     
     %% Data Server components with clear positioning
-    subgraph DS[🖥️ Data Server Machine]
+    subgraph DS["🖥️ <b>Data Server Machine</b>"]
         direction TB
-        DB[(💾 MariaDB<br/>Database)]
-        MC[⚡ Memcached<br/>Cache Layer]
-        NFS[📁 NFS Server<br/>File Storage]
+        DB[("💾<br/><b>MariaDB</b><br/>Database")]
+        MC["⚡<br/><b>Memcached</b><br/>Cache Layer"]
+        NFS["📁<br/><b>NFS Server</b><br/>File Storage"]
     end
 
-    %% Main traffic flow
-    U -->|HTTP/HTTPS<br/>Requests| LB
-    LB -->|Load<br/>Balanced| WS_GROUP
+    %% Main traffic flow with enhanced labels
+    U -->|"🌐 <b>HTTP/HTTPS</b><br/>User Requests"| LB
+    LB -->|"⚡ <b>Load Balanced</b><br/>Traffic Distribution"| WS_GROUP
     
-    %% Database connections (blue)
-    WS1 -->|SQL Queries| DB
-    WS2 -->|SQL Queries| DB
+    %% Database connections with enhanced styling
+    WS1 -->|"🔵 <b>SQL Queries</b><br/>Data Operations"| DB
+    WS2 -->|"🔵 <b>SQL Queries</b><br/>Data Operations"| DB
     
-    %% Cache connections (purple) 
-    WS1 -->|Cache R/W| MC
-    WS2 -->|Cache R/W| MC
+    %% Cache connections with enhanced styling
+    WS1 -->|"🟣 <b>Cache R/W</b><br/>Session Storage"| MC
+    WS2 -->|"🟣 <b>Cache R/W</b><br/>Session Storage"| MC
     
-    %% File storage connections (orange, dashed for NFS)
-    WS1 -.->|NFS Mount<br/>File I/O| NFS
-    WS2 -.->|NFS Mount<br/>File I/O| NFS
+    %% File storage connections (dashed for NFS)
+    WS1 -.->|"🟠 <b>NFS Mount</b><br/>File Operations"| NFS
+    WS2 -.->|"🟠 <b>NFS Mount</b><br/>File Operations"| NFS
 
-    %% Enhanced styling with better colors
-    classDef userClass fill:#e3f2fd,stroke:#1976d2,stroke-width:3px,color:#000
-    classDef loadBalancerClass fill:#fff8e1,stroke:#f57c00,stroke-width:3px,color:#000
-    classDef webserverClass fill:#e8f5e8,stroke:#388e3c,stroke-width:3px,color:#000
-    classDef databaseClass fill:#fce4ec,stroke:#c2185b,stroke-width:3px,color:#000
-    classDef cacheClass fill:#f3e5f5,stroke:#7b1fa2,stroke-width:3px,color:#000
-    classDef storageClass fill:#fff3e0,stroke:#ef6c00,stroke-width:3px,color:#000
-    classDef groupClass fill:#fafafa,stroke:#757575,stroke-width:2px,stroke-dasharray: 5 5
+    %% Enhanced styling optimized for both GitHub light and dark modes
+    classDef userClass fill:#4A90E2,stroke:#2E5BBA,stroke-width:3px,color:#FFFFFF
+    classDef loadBalancerClass fill:#F39C12,stroke:#D68910,stroke-width:3px,color:#FFFFFF
+    classDef webserverClass fill:#27AE60,stroke:#1E8449,stroke-width:3px,color:#FFFFFF
+    classDef databaseClass fill:#E74C3C,stroke:#C0392B,stroke-width:3px,color:#FFFFFF
+    classDef cacheClass fill:#9B59B6,stroke:#7D3C98,stroke-width:3px,color:#FFFFFF
+    classDef storageClass fill:#E67E22,stroke:#CA6F1E,stroke-width:3px,color:#FFFFFF
+    classDef groupClass fill:#34495E,stroke:#2C3E50,stroke-width:2px,color:#FFFFFF,stroke-dasharray: 5 5
 
-    %% Apply styling
+    %% Apply enhanced styling
     class U userClass
     class LB loadBalancerClass
     class WS1,WS2 webserverClass
@@ -77,16 +77,6 @@ graph LR
     class MC cacheClass
     class NFS storageClass
     class DS,WS_GROUP groupClass
-
-    %% Connection styling
-    linkStyle 0 stroke:#2196f3,stroke-width:3px
-    linkStyle 1 stroke:#4caf50,stroke-width:3px
-    linkStyle 2 stroke:#1976d2,stroke-width:2px
-    linkStyle 3 stroke:#1976d2,stroke-width:2px
-    linkStyle 4 stroke:#9c27b0,stroke-width:2px
-    linkStyle 5 stroke:#9c27b0,stroke-width:2px
-    linkStyle 6 stroke:#ff9800,stroke-width:2px
-    linkStyle 7 stroke:#ff9800,stroke-width:2px
 ```
 
 ## 🔍 Features
