@@ -27,7 +27,7 @@ config.php
 # Vagrant box files
 *.box
 # Collections folder
-collections
+collections/
 
 # ignore all inventory files by default
 inventory/*
