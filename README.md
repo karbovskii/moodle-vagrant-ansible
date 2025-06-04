@@ -19,6 +19,76 @@ The infrastructure includes:
 
 Load balancing and Memcached are configured to persist user sessions and distribute traffic.
 
+## 🏗️ Architecture Diagram
+
+The diagram below illustrates the key components and data flow in the Moodle infrastructure deployed by this project:
+
+```mermaid
+graph LR
+    %% Define nodes
+    U[👥 Users]
+    LB[⚖️ Load Balancer<br/>HAProxy]
+    
+    %% Web servers positioned to minimize arrow crossing
+    subgraph WS_GROUP[🌐 Web Server Cluster]
+        direction TB
+        WS1[Web Server 1<br/>Moodle + PHP]
+        WS2[Web Server 2<br/>Moodle + PHP]
+    end
+    
+    %% Data Server components with clear positioning
+    subgraph DS[🖥️ Data Server Machine]
+        direction TB
+        DB[(💾 MariaDB<br/>Database)]
+        MC[⚡ Memcached<br/>Cache Layer]
+        NFS[📁 NFS Server<br/>File Storage]
+    end
+
+    %% Main traffic flow
+    U -->|HTTP/HTTPS<br/>Requests| LB
+    LB -->|Load<br/>Balanced| WS_GROUP
+    
+    %% Database connections (blue)
+    WS1 -->|SQL Queries| DB
+    WS2 -->|SQL Queries| DB
+    
+    %% Cache connections (purple) 
+    WS1 -->|Cache R/W| MC
+    WS2 -->|Cache R/W| MC
+    
+    %% File storage connections (orange, dashed for NFS)
+    WS1 -.->|NFS Mount<br/>File I/O| NFS
+    WS2 -.->|NFS Mount<br/>File I/O| NFS
+
+    %% Enhanced styling with better colors
+    classDef userClass fill:#e3f2fd,stroke:#1976d2,stroke-width:3px,color:#000
+    classDef loadBalancerClass fill:#fff8e1,stroke:#f57c00,stroke-width:3px,color:#000
+    classDef webserverClass fill:#e8f5e8,stroke:#388e3c,stroke-width:3px,color:#000
+    classDef databaseClass fill:#fce4ec,stroke:#c2185b,stroke-width:3px,color:#000
+    classDef cacheClass fill:#f3e5f5,stroke:#7b1fa2,stroke-width:3px,color:#000
+    classDef storageClass fill:#fff3e0,stroke:#ef6c00,stroke-width:3px,color:#000
+    classDef groupClass fill:#fafafa,stroke:#757575,stroke-width:2px,stroke-dasharray: 5 5
+
+    %% Apply styling
+    class U userClass
+    class LB loadBalancerClass
+    class WS1,WS2 webserverClass
+    class DB databaseClass
+    class MC cacheClass
+    class NFS storageClass
+    class DS,WS_GROUP groupClass
+
+    %% Connection styling
+    linkStyle 0 stroke:#2196f3,stroke-width:3px
+    linkStyle 1 stroke:#4caf50,stroke-width:3px
+    linkStyle 2 stroke:#1976d2,stroke-width:2px
+    linkStyle 3 stroke:#1976d2,stroke-width:2px
+    linkStyle 4 stroke:#9c27b0,stroke-width:2px
+    linkStyle 5 stroke:#9c27b0,stroke-width:2px
+    linkStyle 6 stroke:#ff9800,stroke-width:2px
+    linkStyle 7 stroke:#ff9800,stroke-width:2px
+```
+
 ## 🔍 Features
 
 * One-click provisioning via Vagrant and a manual `provision.sh` script.
