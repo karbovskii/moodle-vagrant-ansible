@@ -1,0 +1,6 @@
+#/roles/loadbalancer/handlers/main.yml
+- name: Restart HAProxy
+  ansible.builtin.service:
+    name: haproxy
+    state: restarted
+    enabled: yes

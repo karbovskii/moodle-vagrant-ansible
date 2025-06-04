@@ -1,0 +1,20 @@
+# group_vars/all.yml
+moodle_db_name: moodle
+moodle_db_user: moodleuser
+moodle_db_pass: moodlepass
+moodle_db_host: 192.168.56.11
+
+moodle_admin_user: admin
+moodle_admin_pass: Admin123!
+moodle_admin_email: admin@example.com
+
+moodle_web_ips:
+  - "192.168.56.10"
+  - "192.168.56.12"
+
+wwwroot: "http://{{ hostvars['loadbalancer']['ansible_host'] }}"
+moodle_dataroot: /var/moodledata
+
+nfs_server: "{{ moodle_db_host }}"  # reuse existing IP
+nfs_export_path: "{{ moodle_dataroot }}"
+nfs_mount_path: "{{ moodle_dataroot }}"

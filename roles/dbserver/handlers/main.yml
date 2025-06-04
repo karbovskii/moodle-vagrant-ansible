@@ -1,0 +1,12 @@
+# roles/dbserver/handlers/main.yml
+- name: Restart MariaDB
+  service:
+    name: mariadb
+    state: restarted
+
+- name: Restart Memcached
+  become: yes
+  systemd:
+    name: memcached
+    state: restarted
+    enabled: yes

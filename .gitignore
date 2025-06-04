@@ -1,0 +1,33 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# Ansible cache and temporary files
+*.retry
+
+# IDE/editor configs (optional)
+.vscode/
+.idea/
+
+# Any sensitive files (like local secrets)
+config.php
+
+# good to ignore log files
+*.log
+# good for backups
+*.bak
+# Ansible retry files
+*.retry
+# vim swap files
+*.swp
+# Vagrant metadata files
+*.vagrant
+# Vagrant directory
+.vagrant/
+# Vagrant box files
+*.box
+
+# ignore all inventory files by default
+inventory/*
+# except the main inventory
+!inventory/inventory.ini

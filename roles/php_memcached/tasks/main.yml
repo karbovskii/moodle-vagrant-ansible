@@ -1,0 +1,23 @@
+---
+- name: Install dependencies for PHP Memcached
+  apt:
+    name:
+      - php-memcached
+      - memcached
+    state: present
+  become: yes
+
+- name: Configure PHP to use Memcached for sessions
+  lineinfile:
+    path: /etc/php/8.1/apache2/php.ini
+    regexp: '^session.save_handler'
+    line: 'session.save_handler = memcached'
+  become: yes
+
+- name: Set Memcached save path to DB server IP
+  lineinfile:
+    path: /etc/php/8.1/apache2/php.ini
+    regexp: '^session.save_path'
+    line: 'session.save_path = "192.168.56.11:11211"'
+  become: yes
+  notify: Restart Apache

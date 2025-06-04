@@ -1,0 +1,236 @@
+---
+- name: Install Apache, PHP and dependencies
+  apt:
+    name:
+      - apache2
+      - php
+      - php-mysql
+      - php-xml
+      - php-gd
+      - php-curl
+      - php-zip
+      - php-mbstring
+      - php-intl
+      - php-soap
+      - php-bcmath
+      - git
+      - unzip
+    state: present
+    update_cache: yes
+
+- name: Install PHP memcached extension
+  apt:
+    name: php-memcached
+    state: present
+    update_cache: yes
+  notify: Restart Apache
+
+- name: Ensure PHP max_input_vars setting is at least 5000 for apache2 and cli
+  copy:
+    dest: "/etc/php/8.1/{{ item }}/conf.d/99-moodle.ini"
+    content: "max_input_vars = 5000\n"
+    owner: root
+    group: root
+    mode: '0644'
+  loop:
+    - apache2
+    - cli
+  notify: Restart Apache
+
+- name: Ensure Apache is started and enabled
+  service:
+    name: apache2
+    state: started
+    enabled: yes
+
+- name: Set Git safe directory for Moodle
+  command: git config --global --add safe.directory /var/www/html/moodle
+  args:
+    creates: /root/.gitconfig
+  become: yes
+
+- name: Check if Moodle directory exists
+  ansible.builtin.stat:
+    path: /var/www/html/moodle
+  register: moodle_dir
+
+- name: Clone Moodle repository if not present
+  ansible.builtin.git:
+    repo: https://github.com/moodle/moodle.git
+    dest: /var/www/html/moodle
+    version: MOODLE_403_STABLE
+    force: no
+  when: not moodle_dir.stat.exists
+
+- name: Ensure moodledata directory exists
+  file:
+    path: "{{ moodle_dataroot }}"
+    state: directory
+    owner: www-data
+    group: www-data
+    mode: '0770'
+
+- name: Set permissions on Moodle directory recursively
+  file:
+    path: /var/www/html/moodle
+    state: directory
+    recurse: yes
+    owner: www-data
+    group: www-data
+
+# - name: Deploy Moodle config.php from template
+#   ansible.builtin.template:
+#     src: config.php.j2
+#     dest: /var/www/html/moodle/config.php
+#     owner: www-data
+#     group: www-data
+#     mode: '0644'
+#   notify: Restart Apache
+
+- name: Update Apache default site configuration to serve Moodle
+  ansible.builtin.copy:
+    dest: /etc/apache2/sites-available/000-default.conf
+    content: |
+      <VirtualHost *:80>
+          ServerAdmin webmaster@localhost
+          ServerName 192.168.56.13
+
+          DocumentRoot /var/www/html/moodle
+
+          <Directory /var/www/html/moodle>
+              Options Indexes FollowSymLinks
+              AllowOverride All
+              Require all granted
+          </Directory>
+
+          ErrorLog ${APACHE_LOG_DIR}/error.log
+          CustomLog ${APACHE_LOG_DIR}/access.log combined
+      </VirtualHost>
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart Apache
+
+- name: Enable Apache default site
+  ansible.builtin.command: a2ensite 000-default.conf
+  args:
+    creates: /etc/apache2/sites-enabled/000-default.conf
+  notify: Restart Apache
+
+- name: Check if Memcached is listening on dbserver:11211
+  wait_for:
+    host: "{{ moodle_db_host }}"
+    port: 11211
+    timeout: 5
+    state: started
+  register: memcached_check
+
+- name: Fail if Memcached is not reachable
+  fail:
+    msg: "Memcached is not reachable on {{ moodle_db_host }}:11211"
+  when: memcached_check.failed or memcached_check.state != 'started'
+
+- name: Run Moodle CLI installer (only on webserver1)
+  command: >
+    sudo -u www-data php admin/cli/install.php
+    --wwwroot={{ wwwroot }}
+    --dataroot={{ moodle_dataroot }}
+    --dbtype=mariadb
+    --dbhost={{ moodle_db_host }}
+    --dbname={{ moodle_db_name }}
+    --dbuser={{ moodle_db_user }}
+    --dbpass={{ moodle_db_pass }}
+    --fullname="Moodle Site"
+    --shortname="moodle"
+    --adminuser={{ moodle_admin_user }}
+    --adminpass={{ moodle_admin_pass }}
+    --adminemail={{ moodle_admin_email }}
+    --non-interactive
+    --agree-license
+  args:
+    chdir: /var/www/html/moodle
+    creates: /var/www/html/moodle/config.php
+  become: yes
+  when:
+    - inventory_hostname == 'webserver1'
+    - memcached_check.state == 'started'
+
+- name: Enable email-based self-registration in Moodle
+  command: >
+    sudo -u www-data php admin/cli/cfg.php --name=registerauth --set=email
+  args:
+    chdir: /var/www/html/moodle
+  when: inventory_hostname == 'webserver1'
+
+- name: Enable user self-registration globally
+  command: >
+    sudo -u www-data php admin/cli/cfg.php --name=enableusercreation --set=1
+  args:
+    chdir: /var/www/html/moodle
+  when: inventory_hostname == 'webserver1'
+
+- name: Disable email confirmation for email-based self-registration
+  command: >
+    sudo -u www-data php admin/cli/cfg.php --name=auth_email_signup_email_confirm --set=0
+  args:
+    chdir: /var/www/html/moodle
+  when: inventory_hostname == 'webserver1'
+
+- name: Purge Moodle caches
+  command: sudo -u www-data php admin/cli/purge_caches.php
+  args:
+    chdir: /var/www/html/moodle
+  become: yes
+  when: inventory_hostname == 'webserver1'
+
+
+- name: Read config.php from webserver1
+  slurp:
+    src: /var/www/html/moodle/config.php
+  register: moodle_config
+  run_once: true
+  delegate_to: webserver1
+  notify: Restart Apache
+
+- name: Deploy copied config.php to webserver2 only
+  copy:
+    content: "{{ moodle_config.content | b64decode }}"
+    dest: /var/www/html/moodle/config.php
+    owner: www-data
+    group: www-data
+    mode: '0644'
+  when: inventory_hostname == 'webserver2'
+  notify: Restart Apache
+
+- name: Deploy Memcached session counter test script to webservers
+  ansible.builtin.copy:
+    dest: /var/www/html/moodle/test_memcached.php
+    content: |
+      <?php
+      session_start();
+
+      // Initialize or increment the session counter
+      if (!isset($_SESSION['count'])) {
+          $_SESSION['count'] = 1;
+      } else {
+          $_SESSION['count']++;
+      }
+
+      // Connect to Memcached server
+      $m = new Memcached();
+      $m->addServer('{{ moodle_db_host }}', 11211);
+
+      // Store session count in Memcached with session ID as key
+      $session_key = session_id();
+      $m->set($session_key, $_SESSION['count'], 600);
+
+      // Retrieve the count from Memcached to verify it's working
+      $count_from_memcached = $m->get($session_key);
+
+      echo "Session count stored in Memcached: " . $count_from_memcached . "<br>";
+      echo "Server hostname: {{ inventory_hostname }}";
+    owner: www-data
+    group: www-data
+    mode: '0644'
+
+

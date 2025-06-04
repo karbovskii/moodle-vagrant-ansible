@@ -1,0 +1,21 @@
+# site.yml
+- name: Configure DB Server and NFS Server
+  hosts: dbservers
+  become: yes
+  roles:
+    - role: dbserver
+    - role: nfs_server
+
+- name: Configure Webservers
+  hosts: webservers
+  become: yes
+  roles:
+    - role: webserver
+    - role: nfs_client
+    - role: php_memcached
+
+- name: Configure Load Balancer
+  hosts: loadbalancers
+  become: yes
+  roles:
+    - role: loadbalancer

@@ -1,0 +1,21 @@
+---
+- name: Install NFS server packages
+  apt:
+    name: nfs-kernel-server
+    state: present
+    update_cache: yes
+
+- name: Create Moodle data directory
+  file:
+    path: /var/moodledata
+    state: directory
+    owner: www-data
+    group: www-data
+    mode: '0770'
+
+- name: Configure /etc/exports
+  copy:
+    dest: /etc/exports
+    content: |
+      /var/moodledata 192.168.56.0/24(rw,sync,no_subtree_check)
+  notify: Restart NFS service

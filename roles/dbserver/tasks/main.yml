@@ -1,0 +1,91 @@
+# roles/dbserver/tasks/main.yml
+- name: Install MariaDB server
+  apt:
+    name: mariadb-server
+    state: present
+    update_cache: yes
+
+- name: Install PyMySQL for Ansible MySQL support
+  apt:
+    name: python3-pymysql
+    state: present
+    update_cache: yes
+
+- name: Ensure MariaDB is started and enabled
+  service:
+    name: mariadb
+    state: started
+    enabled: yes
+
+# - name: Ensure root uses unix_socket authentication
+#   shell: mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH unix_socket;"
+#   args:
+#     executable: /bin/bash
+
+- name: Ensure MySQL root uses unix_socket authentication
+  community.mysql.mysql_user:
+    name: root
+    host: localhost
+    plugin: unix_socket
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+
+- name: Create Moodle database
+  mysql_db:
+    name: moodle
+    state: present
+    login_user: root
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+
+- name: Create Moodle user with access from webservers
+  mysql_user:
+    name: "{{ moodle_db_user }}"
+    password: "{{ moodle_db_pass }}"
+    priv: "{{ moodle_db_name }}.*:ALL"
+    host: "{{ item }}"
+    state: present
+    login_user: root
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+  loop:
+    - "192.168.56.10"
+    - "192.168.56.12"
+    - "localhost"
+
+
+- name: Allow remote access to MariaDB (bind-address)
+  lineinfile:
+    path: /etc/mysql/mariadb.conf.d/50-server.cnf
+    regexp: '^bind-address'
+    line: 'bind-address = 0.0.0.0'
+  notify: Restart MariaDB
+
+- name: Install Memcached
+  apt:
+    name: memcached
+    state: present
+  become: yes
+
+- name: Ensure Memcached is running and enabled
+  service:
+    name: memcached
+    state: started
+    enabled: yes
+  become: yes
+
+- name: Allow Memcached port 11211 through firewall (ufw)
+  ufw:
+    rule: allow
+    port: 11211
+    proto: tcp
+  become: yes
+
+- name: Ensure Memcached listens on all interfaces
+  become: yes
+  lineinfile:
+    path: /etc/memcached.conf
+    regexp: '^-l\s+127\.0\.0\.1'
+    line: '-l 0.0.0.0'
+    backup: yes
+  notify: Restart Memcached
+
+
+
